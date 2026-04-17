@@ -11,28 +11,25 @@ import subprocess
 import tempfile
 
 # ── Version ───────────────────────────────────────────────────────────────────
-APP_VERSION = "1.0.5"
+APP_VERSION  = "1.0.6"
 
-# ── UPDATE THESE TWO LINES with your GitHub username and repo name ────────────
-GITHUB_USER = "Nate3700"
-GITHUB_REPO = "Customer_Import_Tool"
-# ─────────────────────────────────────────────────────────────────────────────
+GITHUB_USER  = "Nate3700"
+GITHUB_REPO  = "Customer_Import_Tool"
+EXE_NAME     = "CustImpTool.exe"
 
 VERSION_URL  = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/main/version.json"
-DOWNLOAD_URL = f"https://github.com/{GITHUB_USER}/{GITHUB_REPO}/releases/latest/download/CustImpTool.exe"
+DOWNLOAD_URL = f"https://github.com/{GITHUB_USER}/{GITHUB_REPO}/releases/latest/download/{EXE_NAME}"
 
 # ── Auto-updater ──────────────────────────────────────────────────────────────
 def check_for_updates(app):
-    """Run in a background thread. Silently skips if no internet."""
     try:
         with urllib.request.urlopen(VERSION_URL, timeout=5) as resp:
             data = json.loads(resp.read().decode())
         latest = data.get("version", "0.0.0")
         if _version_tuple(latest) > _version_tuple(APP_VERSION):
-            # Switch back to main thread to show dialog
             app.after(0, lambda: _prompt_update(app, latest))
     except Exception:
-        pass  # No internet or file not found — silently continue
+        pass
 
 def _version_tuple(v):
     return tuple(int(x) for x in v.strip().split("."))
@@ -40,61 +37,77 @@ def _version_tuple(v):
 def _prompt_update(app, latest_version):
     answer = messagebox.askyesno(
         "Update Available",
-        f"A new version of custimp is available.\n\n"
+        f"A new version is available.\n\n"
         f"  Current version:  {APP_VERSION}\n"
         f"  New version:      {latest_version}\n\n"
-        "Would you like to download and install the update now?\n"
-        "(The app will restart automatically.)"
+        "Would you like to download and install it now?\n"
+        "The app will restart automatically."
     )
     if answer:
         _download_and_install(app, latest_version)
 
 def _download_and_install(app, latest_version):
-    """Download new .exe to temp, write a batch script to replace and relaunch."""
     progress = tk.Toplevel(app)
     progress.title("Downloading Update...")
-    progress.geometry("360x110")
+    progress.geometry("380x120")
     progress.resizable(False, False)
     progress.configure(bg='#F7F8FA')
     progress.grab_set()
 
     tk.Label(progress, text=f"Downloading version {latest_version}...",
              font=('Segoe UI', 11), bg='#F7F8FA', fg='#1C2331').pack(pady=(20, 8))
-    bar = ttk.Progressbar(progress, mode='indeterminate', length=300)
+    bar = ttk.Progressbar(progress, mode='indeterminate', length=320)
     bar.pack()
     bar.start(12)
 
     def do_download():
         try:
-            # Download new exe to a temp file
-            tmp_fd, tmp_path = tempfile.mkstemp(suffix='.exe')
-            os.close(tmp_fd)
+            current_exe = os.path.abspath(
+                sys.executable if getattr(sys, 'frozen', False) else __file__)
+            exe_dir  = os.path.dirname(current_exe)
+            tmp_path = os.path.join(exe_dir, '_custimp_update.exe')
+
             urllib.request.urlretrieve(DOWNLOAD_URL, tmp_path)
 
-            current_exe = os.path.abspath(sys.executable
-                                          if getattr(sys, 'frozen', False)
-                                          else __file__)
+            pid = os.getpid()
 
-            # Write a small batch script that:
-            # 1. Waits for this process to exit
-            # 2. Replaces the old .exe with the new one
-            # 3. Relaunches the app
-            # 4. Deletes itself
-            batch = tempfile.NamedTemporaryFile(
-                suffix='.bat', delete=False, mode='w')
-            batch.write(
-                f'@echo off\n'
-                f'ping 127.0.0.1 -n 3 > nul\n'          # wait ~2 sec
-                f'move /Y "{tmp_path}" "{current_exe}"\n'
-                f'start "" "{current_exe}"\n'
-                f'del "%~f0"\n'
-            )
-            batch.close()
+            # VBScript waits until our PID disappears from the process list,
+            # then moves the downloaded exe over the old one and relaunches.
+            # This avoids the DLL-in-use error because the old process is
+            # fully dead before the new one is touched.
+            vbs_lines = [
+                'Dim oShell, oFS',
+                'Set oShell = CreateObject("WScript.Shell")',
+                'Set oFS    = CreateObject("Scripting.FileSystemObject")',
+                '',
+                f'Dim targetPid : targetPid = {pid}',
+                '',
+                'Do',
+                '    Dim oWMI, oProcs',
+                '    Set oWMI   = GetObject("winmgmts://.")',
+                f'    Set oProcs = oWMI.ExecQuery("SELECT * FROM Win32_Process WHERE ProcessId=" & targetPid)',
+                '    If oProcs.Count = 0 Then Exit Do',
+                '    WScript.Sleep 500',
+                'Loop',
+                '',
+                'WScript.Sleep 1000',
+                f'oFS.MoveFile "{tmp_path}", "{current_exe}"',
+                f'oShell.Run Chr(34) & "{current_exe}" & Chr(34), 1, False',
+                'oFS.DeleteFile WScript.ScriptFullName',
+            ]
+
+            vbs_path = os.path.join(exe_dir, '_custimp_updater.vbs')
+            with open(vbs_path, 'w') as f:
+                f.write('\n'.join(vbs_lines))
 
             progress.after(0, progress.destroy)
-            subprocess.Popen(['cmd', '/c', batch.name],
-                             creationflags=subprocess.CREATE_NO_WINDOW
-                             if sys.platform == 'win32' else 0)
+
+            subprocess.Popen(
+                ['wscript.exe', '//Nologo', vbs_path],
+                creationflags=0x08000000,
+                close_fds=True
+            )
+
             app.after(200, app.destroy)
 
         except Exception as e:
