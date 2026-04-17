@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 
 # ── Version ───────────────────────────────────────────────────────────────────
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 
 # ── UPDATE THESE TWO LINES with your GitHub username and repo name ────────────
 GITHUB_USER = "YOUR_GITHUB_USERNAME"
@@ -659,8 +659,8 @@ class CustImpApp(tk.Tk):
             ('last_name',  'Last Name ✏',     150),
             ('balance',    'Balance',          100),
         ]:
-            self.tree.heading(col, text=heading)
-            self.tree.column(col, width=width, minwidth=80, anchor='w')
+            self.tree.heading(col, text=heading, anchor='center')
+            self.tree.column(col, width=width, minwidth=80, anchor='center')
 
         vsb = ttk.Scrollbar(table_frame, orient='vertical', command=self.tree.yview)
         self.tree.configure(yscrollcommand=vsb.set)
