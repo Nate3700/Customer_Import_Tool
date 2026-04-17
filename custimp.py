@@ -14,8 +14,8 @@ import tempfile
 APP_VERSION = "1.0.1"
 
 # ── UPDATE THESE TWO LINES with your GitHub username and repo name ────────────
-GITHUB_USER = "YOUR_GITHUB_USERNAME"
-GITHUB_REPO = "YOUR_REPO_NAME"
+GITHUB_USER = "Nate3700"
+GITHUB_REPO = "Customer_Import_Tool"
 # ─────────────────────────────────────────────────────────────────────────────
 
 VERSION_URL  = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/main/version.json"
