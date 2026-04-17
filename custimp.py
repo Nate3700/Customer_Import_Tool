@@ -19,7 +19,7 @@ GITHUB_REPO = "Customer_Import_Tool"
 # ─────────────────────────────────────────────────────────────────────────────
 
 VERSION_URL  = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/main/version.json"
-DOWNLOAD_URL = f"https://github.com/{GITHUB_USER}/{GITHUB_REPO}/releases/latest/download/custimp.exe"
+DOWNLOAD_URL = f"https://github.com/{GITHUB_USER}/{GITHUB_REPO}/releases/latest/download/CustImpTool.exe"
 
 # ── Auto-updater ──────────────────────────────────────────────────────────────
 def check_for_updates(app):
