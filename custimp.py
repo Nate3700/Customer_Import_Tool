@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 
 # ── Version ───────────────────────────────────────────────────────────────────
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 
 # ── UPDATE THESE TWO LINES with your GitHub username and repo name ────────────
 GITHUB_USER = "Nate3700"
